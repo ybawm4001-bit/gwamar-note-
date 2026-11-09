@@ -1,0 +1,283 @@
+
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#167c70">
+<title>Gwa Mar Note</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;font-family:Arial,sans-serif;
+ background:#f3f6f5;color:#202b2a;
+ transition:.2s;
+}
+body.dark{background:#151c1b;color:#f2f5f4}
+header{
+ background:#167c70;color:white;
+ padding:22px 18px;border-radius:0 0 24px 24px;
+}
+.top{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:25px;margin:0}
+header p{margin:8px 0 0;font-size:13px;opacity:.9}
+button{
+ border:0;border-radius:12px;padding:12px 15px;
+ cursor:pointer;font-size:14px;
+}
+.theme{background:#ffffff25;color:white}
+main{padding:16px;max-width:700px;margin:auto}
+.search{
+ width:100%;padding:15px;border:1px solid #ddd;
+ border-radius:14px;font-size:15px;background:white;
+}
+.dark .search,.dark input,.dark textarea{
+ background:#26312f;color:white;border-color:#44514e;
+}
+.filters{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+.filter{background:#e0ebe8;color:#167c70}
+.filter.active{background:#167c70;color:white}
+.dark .filter{background:#263b37;color:#b5e6d9}
+.dark .filter.active{background:#167c70;color:white}
+.stats{font-size:13px;color:#71817c;margin:12px 2px}
+.note{
+ background:white;padding:15px;border-radius:16px;
+ margin-bottom:12px;box-shadow:0 2px 8px #0000000b;
+}
+.dark .note,.dark .editor{background:#202a28}
+.note-title{font-size:17px;font-weight:bold;margin-bottom:7px}
+.note-content{white-space:pre-wrap;color:#65716e;font-size:14px;line-height:1.5}
+.dark .note-content{color:#bdc9c5}
+.note-date{font-size:11px;color:#999;margin-top:12px}
+.actions{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.actions button{padding:8px 11px;background:#edf3f1;color:#285e53}
+.dark .actions button{background:#34423e;color:white}
+.pin{float:right;cursor:pointer;color:#d69b20}
+.add{
+ position:fixed;right:22px;bottom:22px;
+ width:60px;height:60px;border-radius:50%;
+ background:#167c70;color:white;font-size:30px;
+ box-shadow:0 5px 18px #167c7060;
+}
+.editor{
+ display:none;position:fixed;inset:0;background:#0008;
+ z-index:5;align-items:center;justify-content:center;padding:15px;
+}
+.editor.show{display:flex}
+.panel{
+ background:white;width:100%;max-width:500px;
+ max-height:90vh;overflow:auto;padding:20px;border-radius:20px;
+}
+.panel h2{margin-top:0}
+.panel input,.panel textarea{
+ width:100%;padding:13px;margin:7px 0 14px;
+ border:1px solid #ddd;border-radius:11px;
+ font-size:15px;font-family:inherit;
+}
+.panel textarea{height:160px;resize:vertical}
+.save{background:#167c70;color:white;width:100%;margin-top:10px}
+.cancel{background:#eee;width:100%;margin-top:8px}
+.empty{text-align:center;padding:50px 10px;color:#87938f}
+</style>
+</head>
+
+<body>
+<header>
+ <div class="top">
+  <h1>📝 Gwa Mar Note</h1>
+  <button class="theme" onclick="toggleTheme()">🌙 Theme</button>
+ </div>
+ <p>My private notes · ကိုယ်ပိုင်မှတ်စု</p>
+</header>
+
+<main>
+ <input class="search" id="search" placeholder="🔍 မှတ်စုရှာရန်..." oninput="render()">
+
+ <div class="filters">
+  <button class="filter active" onclick="setFilter('all',this)">အားလုံး</button>
+  <button class="filter" onclick="setFilter('pinned',this)">📌 အကြိုက်ဆုံး</button>
+ </div>
+
+ <div class="stats" id="stats">မှတ်စု 0 ခု</div>
+ <div id="notes"></div>
+</main>
+
+<button class="add" onclick="openEditor()">+</button>
+
+<div class="editor" id="editor">
+ <div class="panel">
+  <h2 id="editorTitle">မှတ်စုအသစ်</h2>
+
+  <label>ခေါင်းစဉ်</label>
+  <input id="title" placeholder="ခေါင်းစဉ်ရေးပါ">
+
+  <label>မှတ်စုအကြောင်းအရာ</label>
+  <textarea id="content" placeholder="ဒီနေရာမှာ မှတ်စုရေးပါ..."></textarea>
+
+  <button class="save" onclick="saveNote()">💾 သိမ်းမည်</button>
+  <button class="cancel" onclick="closeEditor()">မလုပ်တော့ပါ</button>
+ </div>
+</div>
+
+<script>
+let notes = [];
+let currentId = null;
+let filter = 'all';
+
+try {
+ notes = JSON.parse(localStorage.getItem('gwamar_notes') || '[]');
+ if(!Array.isArray(notes)) notes=[];
+} catch(e) { notes=[]; }
+
+function store(){
+ localStorage.setItem('gwamar_notes',JSON.stringify(notes));
+}
+
+function openEditor(id=null){
+ currentId=id;
+ document.getElementById('editorTitle').textContent=
+ id ? 'မှတ်စု ပြင်မည်' : 'မှတ်စုအသစ်';
+
+ const note=notes.find(n=>n.id===id);
+ document.getElementById('title').value=note?note.title:'';
+ document.getElementById('content').value=note?note.content:'';
+ document.getElementById('editor').classList.add('show');
+}
+
+function closeEditor(){
+ document.getElementById('editor').classList.remove('show');
+}
+
+function saveNote(){
+ const title=document.getElementById('title').value.trim();
+ const content=document.getElementById('content').value.trim();
+
+ if(!title && !content){
+  alert('မှတ်စုတစ်ခုခု ရေးပေးပါ။');
+  return;
+ }
+
+ if(currentId){
+  const note=notes.find(n=>n.id===currentId);
+  if(note){
+   note.title=title || 'ခေါင်းစဉ်မရှိ';
+   note.content=content;
+   note.updated=new Date().toLocaleString();
+  }
+ }else{
+  notes.unshift({
+   id:Date.now(),
+   title:title || 'ခေါင်းစဉ်မရှိ',
+   content:content,
+   pinned:false,
+   date:new Date().toLocaleString()
+  });
+ }
+
+ store();
+ closeEditor();
+ render();
+}
+
+function deleteNote(id){
+ if(!confirm('ဒီမှတ်စုကို ဖျက်မှာ သေချာပါသလား?')) return;
+ notes=notes.filter(n=>n.id!==id);
+ store();
+ render();
+}
+
+function togglePin(id){
+ const note=notes.find(n=>n.id===id);
+ if(note) note.pinned=!note.pinned;
+ store();
+ render();
+}
+
+function setFilter(value,btn){
+ filter=value;
+ document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active'));
+ btn.classList.add('active');
+ render();
+}
+
+function render(){
+ const query=document.getElementById('search').value.toLowerCase();
+
+ let list=notes.filter(n=>{
+  const matches=(n.title+' '+n.content).toLowerCase().includes(query);
+  return matches && (filter==='all' || n.pinned);
+ });
+
+ list.sort((a,b)=>
+  Number(b.pinned)-Number(a.pinned)
+ );
+
+ document.getElementById('stats').textContent=
+ 'မှတ်စုစုစုပေါင်း '+notes.length+' ခု';
+
+ const container=document.getElementById('notes');
+
+ if(list.length===0){
+  container.innerHTML='<div class="empty">📝<br><br>မှတ်စု မရှိသေးပါ။<br>+ ကိုနှိပ်ပြီး မှတ်စုအသစ်ရေးပါ။</div>';
+  return;
+ }
+
+ container.innerHTML=list.map(n=>`
+  <div class="note">
+   <span class="pin" onclick="togglePin(${n.id})">
+    ${n.pinned?'📌':'☆'}
+   </span>
+   <div class="note-title">${escapeHTML(n.title)}</div>
+   <div class="note-content">${escapeHTML(n.content)}</div>
+   <div class="note-date">📅 ${escapeHTML(n.updated||n.date||'')}</div>
+   <div class="actions">
+    <button onclick="openEditor(${n.id})">✏️ ပြင်မည်</button>
+    <button onclick="deleteNote(${n.id})">🗑️ ဖျက်မည်</button>
+    <button onclick="shareNote(${n.id})">↗️ မျှဝေမည်</button>
+   </div>
+  </div>
+ `).join('');
+}
+
+function escapeHTML(value){
+ return String(value).replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;',
+  '"':'&quot;',"'":'&#39;'
+ })[c]);
+}
+
+function shareNote(id){
+ const n=notes.find(x=>x.id===id);
+ if(!n)return;
+ const text=n.title+'\n\n'+n.content;
+ if(navigator.share){
+  navigator.share({title:n.title,text:text}).catch(()=>{});
+ }else if(navigator.clipboard){
+  navigator.clipboard.writeText(text)
+   .then(()=>alert('ကူးယူပြီးပါပြီ။'))
+   .catch(()=>alert('မျှဝေခြင်း မအောင်မြင်ပါ။'));
+ }else{
+  alert(text);
+ }
+}
+
+function toggleTheme(){
+ document.body.classList.toggle('dark');
+ localStorage.setItem(
+  'gwamar_dark',
+  document.body.classList.contains('dark')?'yes':'no'
+ );
+}
+
+if(localStorage.getItem('gwamar_dark')==='yes'){
+ document.body.classList.add('dark');
+}
+
+render();if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js")
+    .catch(error => console.log(error));
+  }
+</script>
+</body>
+</html>

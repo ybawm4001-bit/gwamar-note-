@@ -1,0 +1,12 @@
+
+{
+  "name": "Gwa Mar Note",
+  "short_name": "Gwa Mar Note",
+  "description": "My Private Offline Notes",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6f5",
+  "theme_color": "#167c70"
+}
